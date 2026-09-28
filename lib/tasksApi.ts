@@ -1,4 +1,10 @@
 import { Task } from '../components/types';
+import {
+  accrueOverduePenalties,
+  logAbandonedDelete,
+  logRescheduleFee,
+  logTaskCompletion,
+} from './ratingApi';
 import { supabase } from './supabase';
 
 export type NewTaskInput = {
@@ -11,6 +17,12 @@ export type NewTaskInput = {
 };
 
 export async function fetchTasks(): Promise<Task[]> {
+  try {
+    await accrueOverduePenalties();
+  } catch {
+    // Non-fatal: scoring will catch up next time tasks are fetched.
+  }
+
   const { data, error } = await supabase
     .from('tasks')
     .select('*')
@@ -35,6 +47,7 @@ export async function createTask(input: NewTaskInput): Promise<Task> {
       title: input.title,
       description: input.description,
       date: input.date,
+      original_due_date: input.date,
       priority: input.priority,
       reminder: input.reminder,
     })
@@ -55,9 +68,54 @@ export type TaskUpdate = Partial<{
 }>;
 
 export async function updateTask(id: string, patch: TaskUpdate): Promise<Task> {
+  const { data: currentData, error: fetchError } = await supabase
+    .from('tasks')
+    .select('*')
+    .eq('id', id)
+    .single();
+  if (fetchError) throw fetchError;
+
+  const current = currentData as Task;
+  const isPersonal = !current.team_id;
+  const finalPatch: TaskUpdate & {
+    completed_at?: string;
+    original_due_date?: string;
+    reschedule_count?: number;
+  } = { ...patch };
+
+  // First-ever completion: record completed_at and log the rating event.
+  // Re-completing after un-checking doesn't log again (completed_at is
+  // only ever set once), so toggling can't be used to farm points.
+  if (isPersonal && patch.completed === true && !current.completed && !current.completed_at) {
+    const completedAt = new Date().toISOString();
+    finalPatch.completed_at = completedAt;
+    await logTaskCompletion(current, completedAt);
+  }
+
+  // Reschedule: only meaningful when the due date is actually changing on
+  // an incomplete task outside of a completion toggle.
+  if (
+    isPersonal &&
+    patch.date !== undefined &&
+    patch.date !== current.date &&
+    patch.date &&
+    !current.completed &&
+    patch.completed === undefined
+  ) {
+    const originalDue = current.original_due_date ?? current.date;
+    const notYetOverdue = !originalDue || new Date() < new Date(originalDue);
+
+    if (notYetOverdue) {
+      await logRescheduleFee(current);
+      finalPatch.original_due_date = patch.date;
+      finalPatch.reschedule_count = (current.reschedule_count ?? 0) + 1;
+    }
+    // Already overdue: leave original_due_date locked, `date` still updates below.
+  }
+
   const { data, error } = await supabase
     .from('tasks')
-    .update(patch)
+    .update(finalPatch)
     .eq('id', id)
     .select()
     .single();
@@ -67,6 +125,16 @@ export async function updateTask(id: string, patch: TaskUpdate): Promise<Task> {
 }
 
 export async function deleteTask(id: string): Promise<void> {
+  const { data: current } = await supabase
+    .from('tasks')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (current) {
+    await logAbandonedDelete(current as Task);
+  }
+
   const { error } = await supabase.from('tasks').delete().eq('id', id);
   if (error) throw error;
 }

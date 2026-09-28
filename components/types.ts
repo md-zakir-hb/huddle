@@ -12,4 +12,7 @@ export interface Task {
   team_id?: string | null;
   assigned_to?: string | null;
   created_at: string;
+  original_due_date?: string | null;
+  reschedule_count?: number | null;
+  completed_at?: string | null;
 }

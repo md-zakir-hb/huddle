@@ -5,6 +5,7 @@ import { colors, radius, spacing } from '../constants/theme';
 import { scheduleTaskReminder } from '../lib/notifications';
 import { createTask } from '../lib/tasksApi';
 import AddTaskModal from './AddTaskModal';
+import RatingBadge from './RatingBadge';
 import ScreenHeader from './ScreenHeader';
 import { Task } from './types';
 
@@ -21,10 +22,17 @@ export default function PageHeader({
   return (
     <ScreenHeader title="Daily Tasks" subtitle="Manage your daily tasks">
       <View style={styles.TaskCountCard}>
-        <Text style={styles.taskCount}>
-          {completedCount}/{tasks.length}
-        </Text>
-        <Text style={styles.taskTitle}>tasks</Text>
+        <View>
+          <Text style={styles.taskCount}>
+            {completedCount}/{tasks.length}
+          </Text>
+          <Text style={styles.taskTitle}>tasks</Text>
+        </View>
+        <RatingBadge
+          refreshKey={tasks
+            .map(task => `${task.id}:${task.completed}:${task.date}`)
+            .join('|')}
+        />
       </View>
       <TouchableOpacity
         style={styles.addTaskButton}
@@ -51,6 +59,7 @@ const styles = StyleSheet.create({
   TaskCountCard: {
     marginTop: spacing.lg,
     flexDirection: 'row',
+    justifyContent: 'space-between',
     gap: spacing.sm,
     alignItems: 'flex-start',
     width: '100%',
