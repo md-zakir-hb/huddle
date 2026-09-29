@@ -2,7 +2,6 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Image,
   RefreshControl,
@@ -15,6 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { getInitials } from '../components/profileUtils';
 import ScreenHeader from '../components/ScreenHeader';
+import { EmptyState, LoadingSpinner } from '../components/ui';
+import { colors } from '../constants/theme';
 import {
   ConversationPreview,
   fetchConversations,
@@ -174,7 +175,7 @@ export default function ConversationListScreen() {
         </ScreenHeader>
 
         {loading ? (
-          <ActivityIndicator style={styles.loading} color="#091540" />
+          <LoadingSpinner color={colors.primary} />
         ) : (
           <FlatList
             data={conversations}
@@ -189,12 +190,11 @@ export default function ConversationListScreen() {
               />
             }
             ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Icon name="chat-bubble-outline" size={48} color="#c8c8cc" />
-                <Text style={styles.emptyText}>
-                  No conversations yet. Tap + to start one.
-                </Text>
-              </View>
+              <EmptyState
+                icon="chat-bubble-outline"
+                title="No conversations yet"
+                description="Tap the + button to start a chat with a teammate."
+              />
             }
           />
         )}
@@ -222,21 +222,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#7692FF',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  loading: {
-    flex: 1,
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    paddingHorizontal: 32,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: '#9a9a9e',
-    textAlign: 'center',
   },
   list: {
     flexGrow: 1,

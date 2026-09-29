@@ -751,25 +751,28 @@ export default function ChatScreen() {
               />
             </>
           )}
-          {draft.trim() ||
-            (pickedImage && (
-              <TouchableOpacity
-                style={styles.sendBtn}
-                onPress={handleSend}
-                disabled={sending}
-              >
-                <Icon name="send" size={18} color="#fff" />
-              </TouchableOpacity>
-              // ) : (
-              //   <Pressable
-              //     style={[styles.sendBtn, isRecording && styles.micBtnActive]}
-              //     onPressIn={startRecording}
-              //     onPressOut={() => stopRecording(false)}
-              //     disabled={sending}
-              //   >
-              //     <Icon name="mic" size={18} color="#fff" />
-              //   </Pressable>
-            ))}
+          {(draft.trim() || pickedImage) && (
+            <TouchableOpacity
+              style={styles.sendBtn}
+              onPress={handleSend}
+              disabled={sending}
+              accessibilityRole="button"
+              accessibilityLabel="Send message"
+            >
+              <Icon name="send" size={18} color="#fff" />
+            </TouchableOpacity>
+          ) || (
+            <TouchableOpacity
+              style={styles.micBtn}
+              onPressIn={startRecording}
+              onPressOut={() => stopRecording(false)}
+              disabled={sending}
+              accessibilityRole="button"
+              accessibilityLabel="Hold to record a voice message"
+            >
+              <Icon name="mic" size={18} color="#fff" />
+            </TouchableOpacity>
+          )}
         </View>
       </KeyboardAvoidingView>
 
@@ -1066,8 +1069,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  micBtnActive: {
-    backgroundColor: '#e46868',
+  micBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#091540',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   recordingCancelBtn: {
     width: 40,
